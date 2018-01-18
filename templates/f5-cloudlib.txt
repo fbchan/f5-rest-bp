@@ -1,0 +1,33 @@
+sleep 30
+# Download F5 Cloud Library
+mkdir /config/cloud
+curl -o /config/cloud/f5-cloud-libs.tar.gz --silent --fail --retry 20 -L https://api.github.com/repos/F5Networks/f5-cloud-libs/tarball/develop
+tar xvzf /config/cloud/f5-cloud-libs.tar.gz -C /config/cloud/
+mv /config/cloud/F5Networks-f5-cloud-libs-* /config/cloud/f5-cloud-libs
+cd /config/cloud/f5-cloud-libs
+npm install --production
+
+sleep 15
+
+# Download BIGIQ License Manger Script 
+curl -ko /config/bigiplicmgr.py --silent --fail --retry 20 -L https://192.168.101.186/bigiplicmgr.py
+chmod u+x /config/bigiplicmgr.py
+
+/config/bigiplicmgr.py --licmgr_ip {{BIGIQ_LM}} --licmgr_adm admin --licmgr_pwd {{BIGIQ_ADM_PWD}} --bigip_ip {{IP_MGMT}} --bigip_adm admin --bigip_pwd admin --regkey_pool_name RegKeyPool --action assign-license
+
+sleep 30
+
+f5-rest-node /config/cloud/f5-cloud-libs/scripts/onboard.js -o /var/log/onboard.log --no-reboot --host localhost --user admin --password admin --update-user user:admin,password:{{ADMIN_NEW_PWD}} --global-setting mgmt-dhcp:disabled --hostname {{HOSTNAME}} --ntp {{NTP_SERVER}} --tz {{TIMEZONE}} --dns {{DNS}} --module {{F5_MODULE}}
+
+
+sleep 15
+tmsh create net vlan vlan_inside interfaces add { 1.1 { untagged } }
+tmsh create net vlan vlan_outside interfaces add { 1.2 { untagged } }
+tmsh create net self self_{{IP_INSIDE}} address {{IP_INSIDE}}/{{INSIDE_CIDR}} vlan vlan_inside allow-service default
+tmsh create net self self_{{IP_OUTSIDE}} address {{IP_OUTSIDE}}/{{OUTSIDE_CIDR}} vlan vlan_outside allow-service none
+tmsh modify sys global-settings gui-setup disabled
+tmsh save sys config
+#sleep 30
+#/usr/local/bin/SOAPLicenseClient --basekey {{LICENSE_KEY}}
+
+

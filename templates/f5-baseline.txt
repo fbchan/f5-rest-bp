@@ -1,0 +1,8 @@
+sleep 30
+tmsh create net vlan vlan_inside interfaces add { 1.1 { untagged } }
+tmsh create net vlan vlan_outside interfaces add { 1.2 { untagged } }
+tmsh create net self self_{{IP_INSIDE}} address {{IP_INSIDE}}/{{INSIDE_CIDR}} vlan vlan_inside allow-service default
+tmsh create net self self_{{IP_OUTSIDE}} address {{IP_OUTSIDE}}/{{OUTSIDE_CIDR}} vlan vlan_outside allow-service none
+tmsh modify sys global-settings gui-setup disabled
+tmsh save sys config
+
